@@ -92,7 +92,7 @@ public:
     Continuous_with_complements(State *ptr_a, State *ptr_b): a_(ptr_a), b_(ptr_b) {}
 
     bool contains(int s) const override {
-        return a_ -> contains(s) && b_ -> contains(s);
+        return a_ -> contains(s) || b_ -> contains(s);
     }
 } ;
 
@@ -104,7 +104,7 @@ public:
     Continuous_with_gaps_and_complements(State *ptr_a, State *ptr_b, State *ptr_c): a_(ptr_a), b_(ptr_b), c_(ptr_c) {}
 
     bool contains(int s) const override {
-        return a_ -> contains(s) && !(b_ -> contains(s)) && c_ -> contains(s);
+        return (a_ -> contains(s) || c_ -> contains(s)) && !(b_ -> contains(s));
     }
 } ;
 
@@ -143,33 +143,71 @@ public:
     }
 };
 
-int main(int argc, const char * argv[]) {
-    std::ofstream fout("output_2.txt");
+class Check{
+public:
+    static bool test(State* state, int point, bool correct_result){
+        bool result = (*state).contains(point);
+        if (result != correct_result)
+            return false;
+    return true;
+    }
+};
 
+void test(Check checking)
+{
     DiscreteState discrete(1);
-    SegmentState segment(0,10);
-    SetState set({1, 3, 5, 7, 23, 48, 57, 60, 90, 99});
+    if (checking.test(&discrete, 0, false) && checking.test(&discrete, 1, true) && checking.test(&discrete, 2, false))
+        std::cout << "There are no problems with DiscreteState!" << std::endl;
+    else std::cout << "There are problems with DiscreteState!" << std::endl;
+
+    SegmentState segment(-1, 0);
+    if (checking.test(&segment, -2, false) && checking.test(&segment, -1, true) && checking.test(&segment, 0, true) && checking.test(&segment, 1, false))
+        std::cout << "There are no problems with SegmentState!" << std::endl;
+    else std::cout << "There are problems with SegmentState!" << std::endl;
+
+    SetState set(std::set<int>{0, 2, 3, 5});
+    if (checking.test(&set, -1, false) && checking.test(&set, 0, true) && checking.test(&set, 1, false) && checking.test(&set, 2, true) &&
+        checking.test(&set, 3, true) && checking.test(&set, 4, false) && checking.test(&set, 5, true) && checking.test(&set, 6, false))
+        std::cout << "There are no problems with SetState!" << std::endl;
+    else std::cout << "There are problems with SetState!" << std::endl;
 
     Continuous_with_gaps gap(&segment, &set);
-    Continuous_with_complements complement(&discrete, &segment);
+    if (checking.test(&gap, -2, false) && checking.test(&gap, -1, true) && checking.test(&gap, 0, false) && checking.test(&gap, 1, false) &&
+        checking.test(&gap, 3, false) && checking.test(&gap, 4, false))
+        std::cout << "There are no problems with Continuous_with_gaps!" << std::endl;
+    else std::cout << "There are problems with Continuous_with_gaps!" << std::endl;
+
+    Continuous_with_complements complement(&set, &segment);
+    if (checking.test(&complement, -2, false) && checking.test(&complement, -1, true) && checking.test(&complement, 0, true) &&
+        checking.test(&complement, 1, false) && checking.test(&complement, 2, true) && checking.test(&complement, 3, true) &&
+        checking.test(&complement, 4, false) && checking.test(&complement, 5, true) && checking.test(&complement, 6, false))
+        std::cout << "There are no problems with Continuous_with_complements!" << std::endl;
+    else std::cout << "There are problems with Continuous_with_complements!" << std::endl;
+
     Continuous_with_gaps_and_complements gap_complement(&segment, &set, &discrete);
-    CrossingState cross(&discrete, &segment);
-    CombiningState combine(&segment, &set);
+    if (checking.test(&gap_complement, -2, false) && checking.test(&gap_complement, -1, true) && checking.test(&gap_complement, 0, false) &&
+        checking.test(&gap_complement, 1, true) && checking.test(&gap_complement, 2, false) && checking.test(&gap_complement, 3, false) &&
+        checking.test(&gap_complement, 4, false) && checking.test(&gap_complement, 5, false) && checking.test(&gap_complement, 6, false))
+        std::cout << "There are no problems with Continuous_with_gaps_and_complements!" << std::endl;
+    else std::cout << "There are problems with Continuous_with_gaps_and_complements!" << std::endl;
 
-    ProbabilityTest pt(10,0,100,1000000);
-    std::cout << pt(discrete) << std::endl;
-    std::cout << pt(segment) << std::endl;
-    std::cout << pt(set) << std::endl;
-    std::cout << pt(gap) << std::endl;
-    std::cout << pt(complement) << std::endl;
-    std::cout << pt(cross) << std::endl;
-    std::cout << pt(combine) << std::endl;
+    CrossingState cross(&set, &segment);
+    if (checking.test(&cross, -2, false) && checking.test(&cross, -1, false) && checking.test(&cross, 0, true) &&
+        checking.test(&cross, 1, false) && checking.test(&cross, 2, false) && checking.test(&cross, 3, false) &&
+        checking.test(&cross, 4, false) && checking.test(&cross, 5, false) && checking.test(&cross, 6, false))
+        std::cout << "There are no problems with CrossingState!" << std::endl;
+    else std::cout << "There are problems with CrossingState!" << std::endl;
 
-    for (int i = 0; i <= 1000000; i += 1000){
-        ProbabilityTest pt(10,0,100, i);
-        std::cout << i << " " << pt(combine) << std::endl;
-        fout << i << " " << pt(combine) << std::endl;
-    }
-    fout.close();
+    CombiningState combine(&discrete, &set);
+    if (checking.test(&combine, -1, false) && checking.test(&combine, 0, true) && checking.test(&combine, 1, true) &&
+        checking.test(&combine, 2, true) && checking.test(&combine, 3, true) && checking.test(&combine, 4, false) &&
+        checking.test(&combine, 5, true) && checking.test(&combine, 6, false))
+        std::cout << "There are no problems with CombiningState!" << std::endl;
+    else std::cout << "There are problems with CombiningState!" << std::endl;
+}
+
+int main(int argc, const char * argv[]) {
+    Check unit_test;
+    test(unit_test);
     return 0;
 }
